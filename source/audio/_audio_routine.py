@@ -11,7 +11,6 @@ import socket
 import io
 import struct
 from threading import Timer
-import playsound
 
 
 def audio_routine(audio_queue, baby_is_crying):
