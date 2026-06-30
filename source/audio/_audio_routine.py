@@ -64,7 +64,22 @@ def audio_routine(audio_queue, baby_is_crying):
     client_socket = socket.socket()
     #client_socket.connect(('188.166.17.65', 3000))
     try:
-        client_socket.connect(('167.99.215.27', 3000))
+        try:
+            from dotenv import load_dotenv
+            load_dotenv()
+        except ImportError:
+            for path in [".env", "../.env", "../../.env"]:
+                if os.path.exists(path):
+                    with open(path, "r") as f:
+                        for line in f:
+                            line = line.strip()
+                            if not line or line.startswith("#") or "=" not in line:
+                                continue
+                            k, v = line.split("=", 1)
+                            os.environ[k.strip()] = v.strip()
+                    break
+        server_ip = os.environ.get('SERVER_IP', '192.168.11.16')
+        client_socket.connect((server_ip, 3000))
     except Exception:
         print("Using MockSocket")
         client_socket = MockSocket()

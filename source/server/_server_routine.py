@@ -28,10 +28,28 @@ def server_routine(frame_queue, audio_queue,
        Maybe multithreading can be added?
     '''
     
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        import os
+        for path in [".env", "../.env", "../../.env"]:
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#") or "=" not in line:
+                            continue
+                        k, v = line.split("=", 1)
+                        os.environ[k.strip()] = v.strip()
+                break
+    import os
+    server_ip = os.environ.get('SERVER_IP', '192.168.11.16')
+
     # Connect a client socket to my_server:2000 (change my_server to the
     # hostname of your server)
     client_socket_video = socket.socket()
-    client_socket_video.connect(('167.99.215.27', 2000))
+    client_socket_video.connect((server_ip, 2000))
 
     # Make a file-like object out of the connection
     connection_video = client_socket_video.makefile('wb')
@@ -90,7 +108,7 @@ def server_routine(frame_queue, audio_queue,
                             'room_humd': current_room_humidity,
                             'baby_temp': current_baby_temperature}
 
-                    myurl = "http://167.99.215.27:8000/api/data"
+                    myurl = "http://{}:8000/api/data".format(server_ip)
                     req = urllib.request.Request(myurl)
                     req.add_header('Content-Type', 'application/json')
                     jsondata = json.dumps(body)
@@ -112,7 +130,7 @@ def server_routine(frame_queue, audio_queue,
                     body = {'device_id': 26082007,
                             'code': notification_code}
 
-                    myurl = "http://167.99.215.27:8000/api/notification"
+                    myurl = "http://{}:8000/api/notification".format(server_ip)
                     req = urllib.request.Request(myurl)
                     req.add_header('Content-Type', 'application/json')
                     jsondata = json.dumps(body)
