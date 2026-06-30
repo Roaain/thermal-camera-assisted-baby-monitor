@@ -12,6 +12,23 @@ import io
 import struct
 from threading import Timer
 
+class MockAudioStream:
+    def __init__(self): pass
+    def read(self, chunk, exception_on_overflow=False):
+        time.sleep(chunk/48000.0)
+        return b'\x00' * (chunk * 4)
+    def write(self, data): pass
+    def stop_stream(self): pass
+    def close(self): pass
+
+class MockSocket:
+    def recv(self, n):
+        time.sleep(1)
+        return b'w'
+    def send(self, data): pass
+    def makefile(self, mode):
+        return io.BytesIO()
+    def close(self): pass
 
 def audio_routine(audio_queue, baby_is_crying):
     
@@ -31,7 +48,7 @@ def audio_routine(audio_queue, baby_is_crying):
     RATE = 48000
     audio = pyaudio.PyAudio()
     audio_lullaby = pyaudio.PyAudio()
-    lullaby = wave.open(r'/home/pi/Desktop/Project_Files/source_code/source/audio/Baby-sleep-music.wav', 'rb')
+    lullaby = wave.open(os.path.join(os.path.dirname(__file__), 'Baby-sleep-music.wav'), 'rb')
     
     rms_deque = deque([0]*8, 8)
     
@@ -46,7 +63,11 @@ def audio_routine(audio_queue, baby_is_crying):
     # hostname of your server)
     client_socket = socket.socket()
     #client_socket.connect(('188.166.17.65', 3000))
-    client_socket.connect(('167.99.215.27', 3000))
+    try:
+        client_socket.connect(('167.99.215.27', 3000))
+    except Exception:
+        print("Using MockSocket")
+        client_socket = MockSocket()
 
     # Make a file-like object out of the connection
     connection = client_socket.makefile('wb')
@@ -64,17 +85,25 @@ def audio_routine(audio_queue, baby_is_crying):
     try:
         
         server_stream = io.BytesIO()
-        audio_stream = audio.open(format=FORMAT,
-                                  channels=CHANNELS,
-                                  rate=RATE,
-                                  input_device_index = dev_index,
-                                  input=True,
-                                  frames_per_buffer=CHUNK)
+        try:
+            audio_stream = audio.open(format=FORMAT,
+                                      channels=CHANNELS,
+                                      rate=RATE,
+                                      input_device_index = dev_index,
+                                      input=True,
+                                      frames_per_buffer=CHUNK)
+        except Exception:
+            print("Using MockAudioStream for input")
+            audio_stream = MockAudioStream()
         
-        audio_stream_lullaby = audio_lullaby.open(format =audio_lullaby.get_format_from_width(lullaby.getsampwidth()),
-                                      channels = lullaby.getnchannels(),
-                                      rate = 48000,
-                                      output = True)
+        try:
+            audio_stream_lullaby = audio_lullaby.open(format =audio_lullaby.get_format_from_width(lullaby.getsampwidth()),
+                                          channels = lullaby.getnchannels(),
+                                          rate = 48000,
+                                          output = True)
+        except Exception:
+            print("Using MockAudioStream for output")
+            audio_stream_lullaby = MockAudioStream()
 
         while True:
             

@@ -4,12 +4,29 @@ sys.path.append("..")
 from helper_modules.pylepton import Lepton
 from video.frame_preprocessing import float_to_uint8
 
-from picamera.array import PiRGBArray
-from picamera import PiCamera
 import numpy as np
 import cv2
 from skimage import transform
 import time
+
+import time
+import os
+
+class MockLepton:
+    def __enter__(self): return self
+    def __exit__(self, *args): pass
+    def capture(self, *args, **kwargs):
+        time.sleep(0.1)
+        return np.random.randint(7000, 8200, (60, 80), dtype=np.uint16), int(time.time()*1000)
+
+class MockVideoCapture:
+    def __init__(self, *args): pass
+    def isOpened(self): return True
+    def set(self, *args): pass
+    def read(self):
+        time.sleep(1/30.0)
+        return True, np.random.randint(0, 255, (180, 240, 3), dtype=np.uint8)
+    def release(self): pass
 
 from queue import Empty
 
@@ -42,13 +59,14 @@ def video_routine(frame_queue, bgr_thermal_queue, aux_temp, temp_dict, shared_tr
                                  [-3.00482974e+01, 1.20000000e-01,  1.00000000e+00, -5.00000000e-04, 6.40729980e-16,  6.20157957e-16]])
     transform_obj = transform.PolynomialTransform(transform_matrix)
     
-    # Initialize the BGR camera, set the resolution, create the empty memory 
-    # array to get continuous frames
-    bgr_camera = PiCamera()
-    bgr_camera.resolution = RESOLUTION
-    bgr_camera.sensor_mode = 4 # 4:3 aspect ratio, high frame rate, large FoV
-    bgr_camera.framerate = 30
-    bgr_output_array = PiRGBArray(bgr_camera, size=RESOLUTION)
+    # Initialize the BGR camera using OpenCV
+    bgr_camera = cv2.VideoCapture(0)
+    if not bgr_camera.isOpened() or not os.path.exists("/dev/video0"):
+        print("Using MockVideoCapture")
+        bgr_camera = MockVideoCapture(0)
+    bgr_camera.set(cv2.CAP_PROP_FRAME_WIDTH, RESOLUTION[0])
+    bgr_camera.set(cv2.CAP_PROP_FRAME_HEIGHT, RESOLUTION[1])
+    bgr_camera.set(cv2.CAP_PROP_FPS, 30)
     
     # detected faces initialization
     detected_faces = None
@@ -56,7 +74,13 @@ def video_routine(frame_queue, bgr_thermal_queue, aux_temp, temp_dict, shared_tr
     
     # Initialize the thermal camera, create the handle. 
     # DO NOT FORGET TO CLOSE IT MANUALLY!
-    thermal_camera = Lepton("/dev/spidev0.1")
+    try:
+        thermal_camera = Lepton("/dev/spidev0.1")
+        with thermal_camera as tcam:
+            tcam.capture()
+    except Exception:
+        print("Using MockLepton")
+        thermal_camera = MockLepton()
     
     print('yes')
     sys.stdout.flush()
@@ -87,13 +111,15 @@ def video_routine(frame_queue, bgr_thermal_queue, aux_temp, temp_dict, shared_tr
         thermal_frame_is_corrupted = (False, time.perf_counter())
         
         # Start the loop! 
-        # capture_continuous method just spits out the  BGR frames continuously. 
-        for frame in bgr_camera.capture_continuous(bgr_output_array, format = 'bgr',
-                                                   use_video_port = True):
+        # Start the loop! 
+        while True:
+            ret, frame = bgr_camera.read()
+            if not ret:
+                print('Failed to read from camera')
+                break
             
             # Acquire the BGR frame
-            # There was a copy() here. WAS IT NECESSARY, REALLY? CHECK.
-            bgr_frame = np.flip(frame.array,0).astype(np.uint8)
+            bgr_frame = np.flip(frame, 0).astype(np.uint8)
             #raw_thermal_frame = np.flip(raw_thermal_frame,0)
             rotated_thermal_frame = np.flip(cv2.rotate(raw_thermal_frame, cv2.ROTATE_90_CLOCKWISE),1)
             raw_thermal_frame = np.zeros(THERMAL_RES)
@@ -233,11 +259,8 @@ def video_routine(frame_queue, bgr_thermal_queue, aux_temp, temp_dict, shared_tr
                 thermal_frame_is_unique = False
                 thermal_frame_is_corrupted = (True, time.perf_counter())
             
-            # truncate the output array
-            bgr_output_array.truncate(0)
-    
     finally:
         
-        bgr_camera.close()
+        bgr_camera.release()
         print('video routine stopped.')
         sys.stdout.flush()

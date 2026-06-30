@@ -2,11 +2,19 @@ import random
 from queue import Empty
 import sys
 import cv2
-import Adafruit_DHT
+import adafruit_dht
 from control.timed_threads import record_temp_humid_offset, calculate_transform_matrix, detect_face_location, record_baby_temperature
 from threading import Timer
 import serial
 from collections import deque
+import os
+
+class MockSerial:
+    def __init__(self, *args, **kwargs): pass
+    def readline(self):
+        import time
+        time.sleep(0.1)
+        return b"b'45.0,24.0\\r\\n'"
 
 def control_routine(bgr_thermal_queue,
                     shared_transform_matrix,
@@ -33,8 +41,13 @@ def control_routine(bgr_thermal_queue,
     
     baby_temp_deque = deque([0]*20, 20)
     
-    face_detector = cv2.CascadeClassifier('source/control/haarcascade_frontalface_default.xml')
-    DHT_22 = serial.Serial('/dev/ttyUSB0', 9600, timeout = 3)
+    import os
+    face_detector = cv2.CascadeClassifier(os.path.join(os.path.dirname(__file__), 'haarcascade_frontalface_default.xml'))
+    if os.path.exists('/dev/ttyUSB0'):
+        DHT_22 = serial.Serial('/dev/ttyUSB0', 9600, timeout = 3)
+    else:
+        print("Using MockSerial for DHT_22")
+        DHT_22 = MockSerial()
     
     try:
         

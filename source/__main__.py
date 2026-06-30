@@ -43,7 +43,9 @@ if __name__ == '__main__':
     temp_offset = Value('f', 3.0)
     
     # Load temperature map
-    temp_table = loadmat('source/control/temp_map_piecewise_linear.mat')['temp_v2']
+    import os
+    temp_table_path = os.path.join(os.path.dirname(__file__), 'control', 'temp_map_piecewise_linear.mat')
+    temp_table = loadmat(temp_table_path)['temp_v2']
     temp_table = np.hstack((temp_table[4001:],temp_table[:4001]))
     temp_dict = {int(a):b for a,b in temp_table}
     

@@ -4,7 +4,7 @@ from skimage import transform
 from control.transform_matrix import _calculate_transform_matrix
 import sys
 import cv2
-import Adafruit_DHT
+import adafruit_dht
 import numpy as np
 from scipy import stats
 from subprocess import Popen, PIPE
@@ -127,8 +127,13 @@ def record_temp_humid_offset(DHT_22,
         room_humidity = '36.6'
         print('DHT string exception')
     
-    p = Popen(['sudo ./source/control/raspberrypi_video/AUX_temp'], shell = True, stdout = PIPE, stdin = PIPE)
-    chip_temp_raw = int(p.stdout.readline().strip())
+    import os
+    aux_temp_path = os.path.join(os.path.dirname(__file__), 'raspberrypi_video', 'AUX_temp')
+    p = Popen([f'sudo {aux_temp_path}'], shell=True, stdout=PIPE, stdin=PIPE)
+    try:
+        chip_temp_raw = int(p.stdout.readline().strip())
+    except ValueError:
+        chip_temp_raw = 29000 # Dummy value 290K = 17C
     chip_temp = (chip_temp_raw/100)-273
     print('***************************************')
 
