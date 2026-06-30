@@ -4,6 +4,9 @@ Created on Sun Feb 10 16:45:42 2019
 
 @author: ASUS PC
 """
+import os
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 from flask import Flask, render_template, Response
 
 import time
@@ -42,7 +45,8 @@ import json
 def send_device_status(cond):
 
     body = {'device_id': 26082007, 'status': cond}
-    myurl = "http://167.99.215.27:8000/api/updateDeviceStatus"
+    server_ip = os.environ.get('SERVER_IP', '192.168.11.16')
+    myurl = f"http://{server_ip}:8000/api/updateDeviceStatus"
     req = urllib.request.Request(myurl)
     req.add_header('Content-Type', 'application/json')
     jsondata = json.dumps(body)
@@ -214,7 +218,17 @@ def video_feed():
 
 
 def foo():
-    app.run('0.0.0.0', port=5000, debug=False, threaded=True,ssl_context=('/etc/letsencrypt/live/vestelagu.site/fullchain.pem','/etc/letsencrypt/live/vestelagu.site/privkey.pem'))
+    cert_file = os.environ.get('SSL_CERT_FILE')
+    key_file = os.environ.get('SSL_KEY_FILE')
+    # Expand ~ in paths if present
+    if cert_file:
+        cert_file = os.path.expanduser(cert_file)
+    if key_file:
+        key_file = os.path.expanduser(key_file)
+    ssl_ctx = (cert_file, key_file) if cert_file and key_file else None
+    if ssl_ctx is None:
+        print('WARNING: SSL_CERT_FILE / SSL_KEY_FILE not set, running without HTTPS')
+    app.run('0.0.0.0', port=5000, debug=False, threaded=True, ssl_context=ssl_ctx)
 
 
 

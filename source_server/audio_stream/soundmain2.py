@@ -6,7 +6,9 @@ Created on Sun Feb 10 16:45:42 2019
 """
 from flask import Flask, render_template, Response, stream_with_context
 
-
+import os
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 import time
 from threading import Lock, Thread
 import queue
@@ -248,7 +250,9 @@ def gen_audio():
 
 
 def foo():
-    app.run('0.0.0.0', port=4000, debug=False, threaded=True, ssl_context=('/etc/letsencrypt/live/vestelagu.site/fullchain.pem','/etc/letsencrypt/live/vestelagu.site/privkey.pem'))
+    cert_file = os.path.expanduser(os.environ.get('SSL_CERT_FILE', ''))
+    key_file = os.path.expanduser(os.environ.get('SSL_KEY_FILE', ''))
+    app.run('0.0.0.0', port=4000, debug=False, threaded=True, ssl_context=(cert_file, key_file))
 
 
 

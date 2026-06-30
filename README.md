@@ -1,6 +1,6 @@
 # FLIR Lepton 熱成像輔助嬰兒監視器 (Thermal-Camera-Assisted Baby Monitor)
 
-本專案是一個基於樹莓派 (Raspberry Pi) 的智慧嬰兒監視器系統，結合了 **FLIR Lepton 熱成像相機**與**常規 BGR 相機**。系統透過多進程 (Multiprocessing) 架構，即時捕獲影像與音訊，進行影像對齊疊加、嬰兒人臉檢測與體溫量測、哭聲偵測，並將音視頻串流及環境與生理數據上傳至遠端 Flask 伺服器，提供家長一個即時的 Web 監控儀表板。
+本專案是一個基於樹莓派 (Raspberry Pi, 執行 Ubuntu 24.04) 的智慧嬰兒監視器系統，結合了 **FLIR Lepton 熱成像相機**與**常規 BGR 相機**。系統透過多進程 (Multiprocessing) 架構，即時捕獲影像與音訊，進行影像對齊疊加、嬰兒人臉檢測與體溫量測、哭聲偵測，並將音視頻串流及環境與生理數據上傳至遠端 Flask 伺服器，提供家長一個即時的 Web 監控儀表板。
 
 ---
 
@@ -129,7 +129,7 @@ graph TD
 #### 軟體依賴安裝
 1.  **啟用 SPI 與 I2C**：
     進入樹莓派終端機，輸入 `sudo raspi-config`，在 **Interfacing Options** 中啟用 **SPI** 與 **I2C**。重啟樹莓派。
-2.  **安裝系統庫依賴** (以 Debian/Raspbian 為例)：
+2.  **安裝系統庫依賴** (以 Ubuntu 24.04 為例)：
     ```bash
     sudo apt-get update
     sudo apt-get install -y portaudio19-dev python3-dev qt4-dev-tools build-essential

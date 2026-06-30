@@ -164,7 +164,11 @@ def updateDeviceStatus():
 
     #Create notification object
     device = Device.query.filter_by(id=device_id).first()
-    device.device_status = stat
+    if device is None:
+        device = Device(id=str(device_id), device_status=stat, baby_status=0)
+        db.session.add(device)
+    else:
+        device.device_status = stat
     db.session.commit()
 
     response = jsonify()
