@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thermal-baby-monitor"
+version = "0.1.0"
+description = "Thermal camera assisted baby monitor"
+requires-python = ">=3.8"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "audio*",
+    "control*",
+    "helper_modules*",
+    "server*",
+    "video*",
+]

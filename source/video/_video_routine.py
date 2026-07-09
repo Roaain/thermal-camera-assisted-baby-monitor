@@ -1,5 +1,4 @@
 import sys
-sys.path.append("..")
 
 from helper_modules.pylepton import Lepton
 from video.frame_preprocessing import float_to_uint8
@@ -51,7 +50,7 @@ def video_routine(frame_queue, bgr_thermal_queue, aux_temp, temp_dict, shared_tr
     RESOLUTION = (240,180) # Beware that this is the inverse of numpy ordering!
     NP_COMPAT_RES = (180,240)
     THERMAL_RES = (60,80)
-    #CHIP_DESELECT = 0.185 # Deselect duration after corruption, in miliseconds.
+    #CHIP_DESELECT = 0.185 # Deselect duration after corruption, in milliseconds.
     CHIP_DESELECT = 0.25
     
     # Initialize necessary variables

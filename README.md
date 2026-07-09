@@ -8,6 +8,7 @@
 
 - [專案架構 (Project Architecture)](#專案架構-project-architecture)
 - [模擬開發機制 (Hardware Mocking)](#模擬開發機制-hardware-mocking)
+- [溫度校準與對照表說明 (Temperature Calibration)](#溫度校準與對照表說明-temperature-calibration)
 - [環境建置 (Environment Setup)](#環境建置-environment-setup)
   - [樹莓派客戶端 (Client)](#1-樹莓派客戶端-client)
   - [雲端伺服器端 (Server)](#2-雲端伺服器端-server)
@@ -104,6 +105,37 @@ graph TD
 *   **感測器模擬 (`MockSerial`)**：若 `/dev/ttyUSB0` 未連接，自動產生環境溫濕度模擬數據。
 
 這使得開發者在 PC 端執行 `python source` 時，可以直接觀察多進程通訊與畫面合成邏輯。
+
+---
+
+## 溫度校準與對照表說明 (Temperature Calibration)
+
+在 `source/control` 資料夾下，包含兩個 MATLAB 數據格式的校準檔：`temperature_map.mat` 與 `temp_map_piecewise_linear.mat`。**這些檔案並不是由 FLIR 官方提供的，而是本專案開發團隊在研發過程中，針對特定感測器實體硬體自行測試、採集並生成的客製化溫度校正查表。**
+
+### 1. 為什麼需要客製化校準？
+由於專案中使用的 FLIR Lepton 模組為**非輻射計量版本（Non-Radiometry，如 Lepton 2.0/3.0）**，這類相機：
+*   輸出的是沒有物理溫度的原始 ADU（Analog-to-Digital Unit）數值。
+*   ADU 數值受相機焦平面陣列（FPA）自身的發熱與環境溫度影響，存在嚴重的非線性溫漂（Thermal Drift）。
+*   為了在嬰兒監視器上實現精確的體溫量測，必須透過客製化校正，將 `(Raw_ADU, AUX_Temp)` 映射到真實攝氏溫度。
+
+### 2. 客製化校正檔的生成過程細節
+開發團隊在實驗室/測試環境中，透過以下具體步驟生成這些校正對照檔：
+1.  **控制變因實驗（Calibration Experiment）**：
+    *   使用一個可精密調溫的**標準黑體（Blackbody）**或貼有高發射率膠帶的精密溫控熱源作為基準目標，並用經校正的醫療級接觸式溫度計記錄其真實溫度。
+    *   將樹莓派與 Lepton 模組放置在溫度可控的恆溫箱中，逐步改變環境溫度，從而讓 Lepton 內部的焦平面溫度（即 `AUX_temp`）在常見的工作區間內變化。
+2.  **多維數據採集（Data Collection）**：
+    *   對於不同的目標溫度（如 20°C 至 45°C）和不同的相機內部溫度（`AUX_temp`），同時記錄 Lepton 輸出的 Raw ADU 最大像素值（如 `raw_pixel`）。
+    *   收集到大量的數據點三元組：`(Raw_ADU, AUX_Temp, Real_Temperature)`。
+3.  **曲線與查表擬合（Curve Fitting & Matrix Generation）**：
+    *   在 MATLAB 或 Python (SciPy) 中匯入採集到的數據。
+    *   **分段線性擬合 (Piecewise Linear Fitting)**：在不同的 `AUX_Temp` 區間下，將 Raw ADU 與真實溫度進行分段線性插值計算，生成稠密的二維映射查找矩陣（Lookup Table），並在 MATLAB 中匯出為 `temp_map_piecewise_linear.mat`，包含 `temp_v2` 對照表。
+    *   **簡化經驗公式擬合**：利用多元線性回歸（Multiple Linear Regression），將三元組數據擬合成一個高效的線性關係式：
+        $$\text{Temperature} = \text{Raw\_value} \times 0.0403 + \text{AUX\_temperature} \times 1.2803 - 322.895$$
+        此經驗公式大幅節省了執行緒在樹莓派上的查表開銷（目前在 `timed_threads.py` 中被主要採用）。
+
+### 3. 開發與部署建議
+*   **直接使用現成公式**：如果您使用與本專案同型號的 Lepton 2.0/3.0，可以直接沿用此線性經驗公式與 `.mat` 對照表。
+*   **使用內建輻射計量版本（如 Lepton 2.5/3.5）**：如果您使用自帶 Radiometry 的版本，可以直接從晶片讀取經過原廠出廠校正的絕對溫度（如 `TLinear` 模式，以 $0.01 \text{ K}$ 為 LSB），此時可直接忽略或停用本專案的客製化查表與公式。
 
 ---
 

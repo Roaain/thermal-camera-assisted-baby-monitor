@@ -2,7 +2,6 @@ from multiprocessing import Process, Value, Array
 from helper_modules.continuous_queue import ContinuousQueue as Queue
 
 from ctypes import c_bool
-# from pexpect import pxssh
 import sys
 import numpy as np
 
